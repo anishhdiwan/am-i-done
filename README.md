@@ -1,7 +1,7 @@
 # am-i-done
 This repository contains code for reproduction and subsequent analysis of the paper titled "Am I done? Predicting action progress in videos". This reproduction is carried out as part of a course project for the course Deep Learning.
 
-The full description of the reproduction and our findings can be found at [Predicting action progress in videos [paper reproduction]][https://www.anishdiwan.com/post/action-progress-paper-reproduction]
+The full description of the reproduction and our findings can be found at [Predicting action progress in videos - paper reproduction][https://www.anishdiwan.com/post/action-progress-paper-reproduction]
 
 ## Steps To Reproduce This Work
 
