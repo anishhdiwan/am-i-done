@@ -61,34 +61,69 @@ class ProgressNet(nn.Module):
     return x
 
 
-def get_progress_value(sample_ind, split='train'):
-	'''
-	This function returns a progress value depending on the sample index being fed into ProgressNet. This is possible since the faster R-CNN 
-	dataloader returns dataset frames sequentially as per the splitfiles mentioned in /ucf24/splitfiles. The pyannot pickle file in the /ucf24/splitfiles
-	directory contains a dictionary with keys are the video names from the specific splitfiles. Each key has a start index, end index, and num frames
-	value which can be used to calculate linear progess. To find out more, explore the pyannot pickle file and the train or test list text files. Also
-	try exploring the sequentially loaded dataset by running the load_faster_r_cnn.py file. A more detailed description is provided in the reproduction blog. 
-	
-	sample_ind: index of the sample being fed into progressnet (not to be confused with image index in the dataset)
-	path: path to the directory containing the train/test split files and the pyannot pickle file is relative to main.py (assuming that main.py is in a directory outside of the faster rcnn directory)
-	split: which type of split file to use
-	'''
 
-	if split=='train':
-		data_path = os.path.join(os.path.dirname(__file__), '..', 'realtime_action_detection', 'ucf24', 'splitfiles', 'trainlist01.txt')
-	elif split == 'test':
-		data_path = os.path.join(os.path.dirname(__file__), '..', 'realtime_action_detection', 'ucf24', 'splitfiles', 'trainlist01.txt')
+class LinearProgress():
 
-	data_file = open(data_path, 'r')
-	data_list = data_file.read()
-	data_list = data_list.split("\n")
-	data_file.close()
-	# print(data_list)
+    '''
+    This class returns a linear progress value depending on the sample index being fed into ProgressNet. This is possible since the faster R-CNN 
+    dataloader returns dataset frames sequentially as per the splitfiles mentioned in /ucf24/splitfiles. The pyannot pickle file in the /ucf24/splitfiles
+    directory contains a dictionary with keys are the video names from the specific splitfiles. Each key has a start index, end index, and num frames
+    value which can be used to calculate linear progess. To find out more, explore the pyannot pickle file and the train or test list text files. Also
+    try exploring the sequentially loaded dataset by running the load_faster_r_cnn.py file. A more detailed description is provided in the reproduction blog. 
+    
+    sample_ind: index of the sample being fed into progressnet (not to be confused with image index in the dataset)
+    path: path to the directory containing the train/test split files and the pyannot pickle file is relative to main.py (assuming that main.py is in a directory outside of the faster rcnn directory)
+    split: which type of split file to use
+    '''
 
-	annot_path = os.path.join(os.path.dirname(__file__), '..', 'realtime_action_detection', 'ucf24', 'splitfiles', 'pyannot.pkl')
-	with open(annot_path, 'rb') as handle:
-		annotations = pickle.load(handle)
+    def __init__(self, split='train'):
+        if split=='train':
+            data_path = os.path.join(os.path.dirname(__file__), '..', 'realtime_action_detection', 'ucf24', 'splitfiles', 'trainlist01.txt')
+        elif split == 'test':
+            data_path = os.path.join(os.path.dirname(__file__), '..', 'realtime_action_detection', 'ucf24', 'splitfiles', 'testlist01.txt')
 
+        data_file = open(data_path, 'r')
+        data_list = data_file.read()
+        data_list = data_list.split("\n")
+        data_file.close()
+        # print(data_list)
+
+        annot_path = os.path.join(os.path.dirname(__file__), '..', 'realtime_action_detection', 'ucf24', 'splitfiles', 'pyannot.pkl')
+        with open(annot_path, 'rb') as handle:
+            annotations = pickle.load(handle)
+
+        
+        # Tube durations is a list containing 3 element tuples indicating the (tube start, tube end, action class) for each tube that the dataloader loads
+        tube_durations = []
+
+        tube_start = 0
+        for i in range(len(data_list)):
+            sf = annotations[data_list[i]]['annotations'][0]['sf']
+            ef = annotations[data_list[i]]['annotations'][0]['ef']
+            label = annotations[data_list[i]]['label']
+
+            tube_end = tube_start + (ef - sf)
+            tube_durations.append((tube_start, tube_end, label))
+
+            tube_start = tube_end + 1
+
+        self.tube_durations = tube_durations
+
+        # Last match is the last index in tube duration which matched with the sample index. i.e if sample index is if tube durations
+        # is a list like [(0, 46, 0), (47, 77, 0), (78, 109, 0), ..] and the last sample index was 46 (current is 47), the last match would be 0 since it matches
+        # with the 0th index of tube durations. The next last_match would be 1 as the current sample index is 47 which is in the 1st index
+        # This helps quickly search through the whole list of tube durations to get progress values
+        self.last_match = 0
+
+
+    def get_progress_value(self, sample_ind):
+        if self.tube_durations[self.last_match][0] <= sample_ind <= self.tube_durations[self.last_match][1]:
+            # same last_match still applies
+            progress = (sample_ind - self.tube_durations[self.last_match][0])/(self.tube_durations[self.last_match][1] - self.tube_durations[self.last_match][0])
+        elif self.tube_durations[self.last_match + 1][0] <= sample_ind <= self.tube_durations[self.last_match + 1][1]:
+            # last_match needs to be updated
+            self.last_match += 1
+            progress = (sample_ind - self.tube_durations[self.last_match][0])/(self.tube_durations[self.last_match][1] - self.tube_durations[self.last_match][0])
 	
 
 
