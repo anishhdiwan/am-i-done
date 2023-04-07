@@ -33,6 +33,8 @@ backbone_net, dataset = frcnn.setup_backbone(split = split_type)
 bo_loss = pnet.BOLoss()
 progress_net = pnet.ProgressNet()
 optimizer = optim.Adam(net.parameters(), lr=LR)
+lin_prog = pnet.LinearProgress(split=split_type)
+
 
 
 # Setting up the dataloader for making inferences on tubes
@@ -127,4 +129,5 @@ for i in range(NUM_EPOCHS):
 
         ######################################
         # ProgressNet 
+        progress = round(lin_prog.get_progress_value(sample_ind),3)
 

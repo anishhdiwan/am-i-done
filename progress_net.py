@@ -109,10 +109,10 @@ class LinearProgress():
 
         self.tube_durations = tube_durations
 
-        # Last match is the last index in tube duration which matched with the sample index. i.e if sample index is if tube durations
+        # Last match is the last index in tube duration which matched with the sample index. i.e if tube durations
         # is a list like [(0, 46, 0), (47, 77, 0), (78, 109, 0), ..] and the last sample index was 46 (current is 47), the last match would be 0 since it matches
         # with the 0th index of tube durations. The next last_match would be 1 as the current sample index is 47 which is in the 1st index
-        # This helps quickly search through the whole list of tube durations to get progress values
+        # This helps quickly search through tube durations to get progress values
         self.last_match = 0
 
 
