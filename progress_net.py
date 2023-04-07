@@ -40,24 +40,28 @@ class ProgressNet(nn.Module):
   def __init__(self):
     super(ProgessNet, self).__init__()
 
-    self.spp = nn.MaxPool2d((10, 10))
+    self.spp = nn.MaxPool2d((30, 30), stride=10) # For a 300 x 300 image the output shape is 3, 28, 28
     # self. roi = nn.ROIPool((width, height), spatial_scale)
     self.fc7 = nn.Linear(in_dim, 128)
     self.lstm = nn.LSTM(128, 128, num_layers=2)
     self.fc8 = nn.Linear(128, 1)
     self.softmax = nn.Softmax()
+    self.dropout = nn.Dropout(0.5)
   
   def forward(self, x, bbox):
   	'''
   	x = image
   	bbox = list with x1, y1, x2, y2 as bbox coordinates
   	'''
-    x = spp(x)
-    y = roi_pool(x, bbox, (10,10))
+    x = self.spp(x)
+    y = roi_pool(x, bbox, (16,12))
     x = torch.cat((x,y))
-    x = fc7(x)
-    x = lstm(x)
-    x = softmax(x)
+    x = self.fc7(x)
+    x = self.dropout(x)
+    x = self.lstm(x)
+    x = self.fc8(x)
+    x = self.dropout(x)
+    x = self.softmax(x)
     return x
 
 
