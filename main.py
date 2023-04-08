@@ -4,6 +4,7 @@ import torch.backends.cudnn as cudnn
 import torch.utils.data as data
 import torch.optim as optim
 import torch.nn as nn
+from torch.utils.tensorboard import SummaryWriter
  
 import sys
 sys.path.append('../realtime_action_detection')
@@ -12,6 +13,7 @@ from data import (CLASSES, detection_collate)
 import load_faster_r_cnn as frcnn
 import progress_net as pnet
 import os
+from tqdm import tqdm
 
 
 NUM_EPOCHS = 1
@@ -19,6 +21,7 @@ LR = 1e-4
 CUTOFF = 100
 NUM_CLASSES = len(CLASSES) + 1  # +1 'background' class
 loss_type = 'BO' # 'MSE'
+RUN_NAME = 'test1'
 
 # Split type is the variable used to choose between running through the train or test list of ucf24. These lists indicate which dataset
 # entries are passed through the network and can be found in the splitfiles directory in /ucf24
@@ -40,6 +43,14 @@ if loss_type == 'BO':
     bo_loss = pnet.BOLoss()
 elif loss_type == 'MSE':
     mse_loss = nn.MSELoss()
+
+
+# Setting up a run type to indicate whether the model is being trained or just tested (inference)
+run_type = 'train' # or 'test'
+
+# Setting up a MSE object to compute average progress prediction MSE across all runs
+if run_type == 'test':
+    mse = nn.MSELoss()
 
 if CUDA:
     progress_net = pnet.ProgressNet().cuda()
@@ -65,13 +76,25 @@ print('Number of images: ', len(dataset),
       '\nNumber of batches: ', num_samples)
 
 
+
+logdir = f"runs/lr_{LR}_loss_type_{loss_type}_epochs_{NUM_EPOCHS}_data_used_{split_type}_run_{RUN_NAME}"
+
+# Setting up the tensorboard summary writer
+writer = SummaryWriter(log_dir=os.path.join(os.path.dirname(__file__), logdir))
+
+
 sample_itr = iter(data_loader) # Iterator to iterate through the data_loader
 
+# Counting the number of total learning steps
+total_steps = 0
+progress_MSE = 0
 
 for i in range(NUM_EPOCHS):
     # iterate over samples
-    for sample_ind in range(CUTOFF):
-
+    loop = tqdm(range(CUTOFF))
+    for sample_ind in loop:
+        loop.set_description(f"Epoch {i} Samples")
+        
         if CUDA:
             torch.cuda.synchronize()
 
@@ -147,7 +170,12 @@ for i in range(NUM_EPOCHS):
         ######################################
         # ProgressNet 
         progress = round(lin_prog.get_progress_value(sample_ind),4)
-        predicted_progress = progress_net(image, bbox)
+
+        if run_type == 'train':
+            predicted_progress = progress_net(image, bbox)
+        elif run_type == 'test':
+            with torch.no_grad():
+                predicted_progress = progress_net(image, bbox)
 
         # Loss
         if loss_type == 'MSE':
@@ -157,11 +185,18 @@ for i in range(NUM_EPOCHS):
             loss = bo_loss(torch.tensor(progress), predicted_progress, [(action_tube[0], action_tube[1])]) 
 
 
-        # Optimize the model
-        optimizer.zero_grad() # Not calling zero_grad as we are working with RNNs
-        loss.backward()
-        optimizer.step()
+        if run_type == 'train':
+            # If training, then optimize the model and write training metrics
+            # Optimize the model
+            optimizer.zero_grad() # Not calling zero_grad as we are working with RNNs
+            loss.backward()
+            optimizer.step()
+
+            writer.add_scalar("Loss vs Total Steps (across all episodes)", loss, total_steps)
+            total_steps += 1
+        elif run_type == 'test':
+            progress_MSE = 0.5*progress_MSE + 0.5*mse(torch.tensor(progress), predicted_progress)
 
 
-        print(f'Sample idx: {sample_ind} | predicted_progress {predicted_progress} | progress {progress}')
+        # print(f'Sample idx: {sample_ind} | predicted_progress {predicted_progress} | progress {progress}')
 

@@ -60,7 +60,7 @@ class ProgressNet(nn.Module):
     x = self.fc7(x)
     x = self.relu(x)
     x = self.dropout(x)
-    print(x.shape)
+    # print(x.shape)
     x, (h_n, c_n) = self.lstm1(x.view(1,1,128))
     # print(x.shape)
     x, (h_n, c_n) = self.lstm2(x)
