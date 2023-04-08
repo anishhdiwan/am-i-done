@@ -158,7 +158,7 @@ for i in range(NUM_EPOCHS):
 
 
         # Optimize the model
-        # optimizer.zero_grad() # Not calling zero_grad as we are working with RNNs
+        optimizer.zero_grad() # Not calling zero_grad as we are working with RNNs
         loss.backward()
         optimizer.step()
 
