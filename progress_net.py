@@ -4,7 +4,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.ops import roi_pool
 from torchsummary import summary
-from tqdm import tqdm
 import numpy as np
 import pickle
 import os
@@ -38,29 +37,33 @@ class BOLoss(nn.Module):
 
 class ProgressNet(nn.Module):
   def __init__(self):
-    super(ProgessNet, self).__init__()
-
+    super().__init__()
     self.spp = nn.MaxPool2d((30, 30), stride=10) # For a 300 x 300 image the output shape is 3, 28, 28
     # self. roi = nn.ROIPool((width, height), spatial_scale)
-    self.fc7 = nn.Linear(in_dim, 128)
-    self.lstm = nn.LSTM(128, 128, num_layers=2)
-    self.fc8 = nn.Linear(128, 1)
+    self.fc7 = nn.Linear(2928, 128) # in_dim = 2928 as the spp output is 3x28x28 and the roi output is 3x16x12. Both are flattened and passed to fc7 
+    self.lstm1 = nn.LSTM(128, 64, num_layers=1)
+    self.lstm2 = nn.LSTM(64, 32, num_layers=1)
+    self.fc8 = nn.Linear(32, 1)
     self.softmax = nn.Softmax()
+    self.relu = nn.ReLU()
     self.dropout = nn.Dropout(0.5)
   
   def forward(self, x, bbox):
-  	'''
-  	x = image
-  	bbox = list with x1, y1, x2, y2 as bbox coordinates
-  	'''
+    '''
+    x = image
+    bbox = list with x1, y1, x2, y2 as bbox coordinates
+    '''
+
     x = self.spp(x)
     y = roi_pool(x, bbox, (16,12))
     x = torch.cat((x,y))
     x = self.fc7(x)
+    x = self.relu(x)
     x = self.dropout(x)
-    x = self.lstm(x)
+    x = self.lstm1(x)
+    x = self.lstm2(x)
     x = self.fc8(x)
-    x = self.dropout(x)
+    # x = self.dropout(x)
     x = self.softmax(x)
     return x
 
@@ -112,6 +115,7 @@ class LinearProgress():
             tube_start = tube_end + 1
 
         self.tube_durations = tube_durations
+        print('=== Finished processing ground truth tubes!')
 
         # Last match is the last index in tube duration which matched with the sample index. i.e if tube durations
         # is a list like [(0, 46, 0), (47, 77, 0), (78, 109, 0), ..] and the last sample index was 46 (current is 47), the last match would be 0 since it matches
@@ -124,11 +128,12 @@ class LinearProgress():
         if self.tube_durations[self.last_match][0] <= sample_ind <= self.tube_durations[self.last_match][1]:
             # same last_match still applies
             progress = (sample_ind - self.tube_durations[self.last_match][0])/(self.tube_durations[self.last_match][1] - self.tube_durations[self.last_match][0])
+            return progress
         elif self.tube_durations[self.last_match + 1][0] <= sample_ind <= self.tube_durations[self.last_match + 1][1]:
             # last_match needs to be updated
             self.last_match += 1
             progress = (sample_ind - self.tube_durations[self.last_match][0])/(self.tube_durations[self.last_match][1] - self.tube_durations[self.last_match][0])
-	
+            return progress	
 
 
 

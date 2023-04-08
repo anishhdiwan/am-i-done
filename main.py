@@ -3,19 +3,21 @@ import torch
 import torch.backends.cudnn as cudnn
 import torch.utils.data as data
 import torch.optim as optim
-
-from data import (CLASSES, detection_collate)
+import torch.nn as nn
  
 import sys
 sys.path.append('../realtime_action_detection')
 
+from data import (CLASSES, detection_collate)
 import load_faster_r_cnn as frcnn
 import progress_net as pnet
+import os
 
 
 NUM_EPOCHS = 1
 LR = 1e-4
 CUTOFF = 100
+NUM_CLASSES = len(CLASSES) + 1  # +1 'background' class
 
 # Split type is the variable used to choose between running through the train or test list of ucf24. These lists indicate which dataset
 # entries are passed through the network and can be found in the splitfiles directory in /ucf24
@@ -29,17 +31,24 @@ else:
     torch.set_default_tensor_type('torch.FloatTensor')
 
 
-backbone_net, dataset = frcnn.setup_backbone(split = split_type)
-bo_loss = pnet.BOLoss()
-progress_net = pnet.ProgressNet()
-optimizer = optim.Adam(net.parameters(), lr=LR)
+# './rgb-ssd300_ucf24_120000.pth'
+
+backbone_net, dataset = frcnn.setup_backbone(split = split_type, BASENET = os.path.join(os.path.dirname(__file__), '..', 'realtime_action_detection', 'rgb-ssd300_ucf24_120000.pth'), DATASET_PATH=os.path.join(os.path.dirname(__file__), '..', 'realtime_action_detection', 'ucf24/'))
+# bo_loss = pnet.BOLoss()
+loss = nn.MSELoss()
+
+if CUDA:
+    progress_net = pnet.ProgressNet().cuda()
+else:
+    progress_net = pnet.ProgressNet()
+
+optimizer = optim.Adam(progress_net.parameters(), lr=LR)
 lin_prog = pnet.LinearProgress(split=split_type)
 
 
 
 # Setting up the dataloader for making inferences on tubes
 data_loader = data.DataLoader(dataset,
-                                  num_workers=NUM_WORKERS,
                                   shuffle=False,
                                   collate_fn=detection_collate,
                                   pin_memory=True)
@@ -59,8 +68,8 @@ for i in range(NUM_EPOCHS):
     # iterate over samples
     for sample_ind in range(CUTOFF):
 
-        # if CUDA:
-        #     torch.cuda.synchronize()
+        if CUDA:
+            torch.cuda.synchronize()
 
         ######################################
         # Faster R-CNN
@@ -119,6 +128,8 @@ for i in range(NUM_EPOCHS):
             max_conf = np.argmax(detected_bboxes[:,-1])
             highest_conf_bbox = detected_bboxes[max_conf]
             detected_class = list(detections_dict.keys())[max_conf]
+        else:
+            continue
 
         # print(f"class : {detected_class}")
         # print(f"bbox : {highest_conf_bbox}")
@@ -126,8 +137,9 @@ for i in range(NUM_EPOCHS):
         bbox = highest_conf_bbox[:-1]
         image = images[0]
 
-
         ######################################
         # ProgressNet 
-        progress = round(lin_prog.get_progress_value(sample_ind),3)
+        progress = round(lin_prog.get_progress_value(sample_ind),4)
+
+        print(f'done: {sample_ind} | image_shape {image.shape} | bbox_shape {bbox.shape} | progress {progress}')
 
