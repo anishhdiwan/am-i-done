@@ -11,7 +11,7 @@ import os
 
 class BOLoss(nn.Module):
     def __init__(self, phase_intervals):
-        super(BOLoss, self).__init__()
+        super().__init__()
         self.phase_intervals = phase_intervals
 
     def forward(self, predictions, targets):
@@ -44,7 +44,7 @@ class ProgressNet(nn.Module):
     self.lstm1 = nn.LSTM(128, 64, num_layers=1)
     self.lstm2 = nn.LSTM(64, 32, num_layers=1)
     self.fc8 = nn.Linear(32, 1)
-    self.softmax = nn.Softmax()
+    # self.softmax = nn.Softmax()
     self.relu = nn.ReLU()
     self.dropout = nn.Dropout(0.5)
   
@@ -54,18 +54,21 @@ class ProgressNet(nn.Module):
     bbox = list with x1, y1, x2, y2 as bbox coordinates
     '''
 
-    x = self.spp(x)
+    x = self.spp(x.view(1,3,300,300))
     y = roi_pool(x, bbox, (16,12))
-    x = torch.cat((x,y))
+    x = torch.cat((x.flatten(), y.flatten())).view(1,-1)
     x = self.fc7(x)
     x = self.relu(x)
     x = self.dropout(x)
-    x = self.lstm1(x)
-    x = self.lstm2(x)
+    print(x.shape)
+    x, (h_n, c_n) = self.lstm1(x.view(1,1,128))
+    # print(x.shape)
+    x, (h_n, c_n) = self.lstm2(x)
     x = self.fc8(x)
     # x = self.dropout(x)
-    x = self.softmax(x)
-    return x
+    # x = self.softmax(x)
+    return torch.special.expit(x)
+    # return x
 
 
 

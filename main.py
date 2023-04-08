@@ -35,7 +35,7 @@ else:
 
 backbone_net, dataset = frcnn.setup_backbone(split = split_type, BASENET = os.path.join(os.path.dirname(__file__), '..', 'realtime_action_detection', 'rgb-ssd300_ucf24_120000.pth'), DATASET_PATH=os.path.join(os.path.dirname(__file__), '..', 'realtime_action_detection', 'ucf24/'))
 # bo_loss = pnet.BOLoss()
-loss = nn.MSELoss()
+mse_loss = nn.MSELoss()
 
 if CUDA:
     progress_net = pnet.ProgressNet().cuda()
@@ -134,12 +134,25 @@ for i in range(NUM_EPOCHS):
         # print(f"class : {detected_class}")
         # print(f"bbox : {highest_conf_bbox}")
 
-        bbox = highest_conf_bbox[:-1]
+        bbox = np.zeros((1,5))
+        bbox[0,0] = 0
+        bbox[0,1:5] = highest_conf_bbox[:-1]
+        bbox = torch.tensor(bbox).float().cuda()
         image = images[0]
 
         ######################################
         # ProgressNet 
         progress = round(lin_prog.get_progress_value(sample_ind),4)
+        predicted_progress = progress_net(image, bbox)
 
-        print(f'done: {sample_ind} | image_shape {image.shape} | bbox_shape {bbox.shape} | progress {progress}')
+        # Loss
+        loss = mse_loss(torch.tensor(progress), predicted_progress)
+
+        # Optimize the model
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+
+        print(f'Sample idx: {sample_ind} | predicted_progress {predicted_progress} | progress {progress}')
 
