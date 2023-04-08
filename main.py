@@ -18,6 +18,7 @@ NUM_EPOCHS = 1
 LR = 1e-4
 CUTOFF = 100
 NUM_CLASSES = len(CLASSES) + 1  # +1 'background' class
+loss_type = 'BO' # 'MSE'
 
 # Split type is the variable used to choose between running through the train or test list of ucf24. These lists indicate which dataset
 # entries are passed through the network and can be found in the splitfiles directory in /ucf24
@@ -34,8 +35,11 @@ else:
 # './rgb-ssd300_ucf24_120000.pth'
 
 backbone_net, dataset = frcnn.setup_backbone(split = split_type, BASENET = os.path.join(os.path.dirname(__file__), '..', 'realtime_action_detection', 'rgb-ssd300_ucf24_120000.pth'), DATASET_PATH=os.path.join(os.path.dirname(__file__), '..', 'realtime_action_detection', 'ucf24/'))
-# bo_loss = pnet.BOLoss()
-mse_loss = nn.MSELoss()
+
+if loss_type == 'BO':
+    bo_loss = pnet.BOLoss()
+elif loss_type == 'MSE':
+    mse_loss = nn.MSELoss()
 
 if CUDA:
     progress_net = pnet.ProgressNet().cuda()
@@ -146,10 +150,15 @@ for i in range(NUM_EPOCHS):
         predicted_progress = progress_net(image, bbox)
 
         # Loss
-        loss = mse_loss(torch.tensor(progress), predicted_progress)
+        if loss_type == 'MSE':
+            loss = mse_loss(torch.tensor(progress), predicted_progress)
+        elif loss_type == 'BO':
+            action_tube = lin_prog.tube_durations[lin_prog.last_match]
+            loss = bo_loss(torch.tensor(progress), predicted_progress, [(action_tube[0], action_tube[1])]) 
+
 
         # Optimize the model
-        optimizer.zero_grad()
+        # optimizer.zero_grad() # Not calling zero_grad as we are working with RNNs
         loss.backward()
         optimizer.step()
 

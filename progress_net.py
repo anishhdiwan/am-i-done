@@ -10,16 +10,16 @@ import os
 
 
 class BOLoss(nn.Module):
-    def __init__(self, phase_intervals):
+    def __init__(self):
         super().__init__()
-        self.phase_intervals = phase_intervals
+        # self.phase_intervals = phase_intervals
 
-    def forward(self, predictions, targets):
-        N = predictions.shape[0]
+    def forward(self, predictions, targets, phase_intervals):
+        # N = predictions.shape[0]
         errors = torch.abs(predictions - targets)
         potentials = []
 
-        for (l_k, u_k) in self.phase_intervals:
+        for (l_k, u_k) in phase_intervals:
             m_k = (l_k + u_k) / 2
             r_k = (u_k - l_k) / 2
             e_k = torch.min(
