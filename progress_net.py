@@ -77,14 +77,18 @@ class ProgressNet(nn.Module):
 class LinearProgress():
 
     '''
-    This class returns a linear progress value depending on the sample index being fed into ProgressNet. This is possible since the faster R-CNN 
-    dataloader returns dataset frames sequentially as per the splitfiles mentioned in /ucf24/splitfiles. The pyannot pickle file in the /ucf24/splitfiles
-    directory contains a dictionary with keys are the video names from the specific splitfiles. Each key has a start index, end index, and num frames
-    value which can be used to calculate linear progess. To find out more, explore the pyannot pickle file and the train or test list text files. Also
-    try exploring the sequentially loaded dataset by running the load_faster_r_cnn.py file. A more detailed description is provided in the reproduction blog. 
-    
+    This class returns a linear progress value depending on the sample index being fed into ProgressNet.
+    This is possible since the faster R-CNN dataloader returns dataset frames sequentially as per the
+    splitfiles mentioned in /ucf24/splitfiles. The pyannot pickle file in the /ucf24/splitfiles
+    directory contains a dictionary with keys are the video names from the specific splitfiles.
+    Each key has a start index, end index, and num frames
+    value which can be used to calculate linear progess. To find out more, explore the pyannot pickle
+    file and the train or test list text files. Also try exploring the sequentially loaded dataset by
+    running the load_faster_r_cnn.py file. A more detailed description is provided in the reproduction blog.
+
     sample_ind: index of the sample being fed into progressnet (not to be confused with image index in the dataset)
-    path: path to the directory containing the train/test split files and the pyannot pickle file is relative to main.py (assuming that main.py is in a directory outside of the faster rcnn directory)
+    path: path to the directory containing the train/test split files and the pyannot pickle file is relative to main.py
+          (assuming that main.py is in a directory outside of the faster rcnn directory)
     split: which type of split file to use
     '''
 
@@ -104,8 +108,9 @@ class LinearProgress():
         with open(annot_path, 'rb') as handle:
             annotations = pickle.load(handle)
 
-        
-        # Tube durations is a list containing 3 element tuples indicating the (tube start, tube end, action class) for each tube that the dataloader loads
+
+        # Tube durations is a list containing 3 element tuples indicating the (tube start, tube end, action class)
+        # for each tube that the dataloader loads
         tube_durations = []
 
         tube_start = 0
@@ -123,8 +128,9 @@ class LinearProgress():
         print('=== Finished processing ground truth tubes!')
 
         # Last match is the last index in tube duration which matched with the sample index. i.e if tube durations
-        # is a list like [(0, 46, 0), (47, 77, 0), (78, 109, 0), ..] and the last sample index was 46 (current is 47), the last match would be 0 since it matches
-        # with the 0th index of tube durations. The next last_match would be 1 as the current sample index is 47 which is in the 1st index
+        # is a list like [(0, 46, 0), (47, 77, 0), (78, 109, 0), ..] and the last sample index was 46 (current is 47),
+        # the last match would be 0 since it matches with the 0th index of tube durations.
+        # The next last_match would be 1 as the current sample index is 47 which is in the 1st index
         # This helps quickly search through tube durations to get progress values
         self.last_match = 0
 

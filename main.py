@@ -29,7 +29,7 @@ RUN_NAME = 'test1'
 split_type = 'test' # OR 'train'
 
 # Setting up GPU availability
-CUDA = False
+CUDA = True
 if CUDA and torch.cuda.is_available():
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
 else:
