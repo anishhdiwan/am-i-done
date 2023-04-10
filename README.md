@@ -1,9 +1,14 @@
 # am-i-done
-This repository contains code for reproduction and subsequent analysis of the paper titled "Am I done? Predicting action progress in videos". This reproduction is carried out as part of a course project for the course Deep Learning.
+This repository contains code for reproduction and subsequent analysis of 
+the paper titled "Am I done? Predicting action progress in videos". This 
+reproduction is carried out as part of a course project for the course 
+Deep Learning.
 
-The full description of the reproduction and our findings can be found at [Predicting action progress in videos - paper reproduction](https://www.anishdiwan.com/post/action-progress-paper-reproduction)
+The full description of the reproduction and our findings can be found at 
+[Predicting action progress in videos - paper 
+reproduction](https://www.anishdiwan.com/post/action-progress-paper-reproduction)
 
-## Steps To Reproduce This Work
+## Steps to reproduce this work
 
 1. Clone our fork of the original faster R-CNN repository
    ``` bash
@@ -14,14 +19,12 @@ The full description of the reproduction and our findings can be found at [Predi
    drive](https://drive.google.com/drive/folders/1Z42S8fQt4Amp1HsqyBOoHBtgVKUzJuJ8), 
    or with `gdown`
    ``` bash
-   gdown 
-   https://drive.google.com/uc?id=1IyqjUQofRyYrAQ-Uz7MPsSqVBlBe-Zk7
+   gdown https://drive.google.com/uc?id=1IyqjUQofRyYrAQ-Uz7MPsSqVBlBe-Zk7
    ```
 3. Download the UCF24 dataset used in the faster R-CNN paper from the same 
    google drive link, or with `gdown`
    ``` bash
-   gdown 
-   https://drive.google.com/uc?id=1o2l6nYhd-0DDXGP-IPReBP4y1ffVmGSE
+   gdown https://drive.google.com/uc?id=1o2l6nYhd-0DDXGP-IPReBP4y1ffVmGSE
    ```
 4. Place both the pre-trained model called `rgb-ssd300_ucf24_120000.pth` 
    and the downloaded .tar.gz file in the `realtime-action-detection` 
