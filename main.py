@@ -39,10 +39,10 @@ else:
 # './rgb-ssd300_ucf24_120000.pth'
 
 backbone_net, dataset = frcnn.setup_backbone(
-    split = split_type,
-    BASENET = os.path.join(os.path.dirname(__file__),
-                           FASTER_RCNN_PATH,
-                           'rgb-ssd300_ucf24_120000.pth'),
+    split=split_type,
+    BASENET=os.path.join(os.path.dirname(__file__),
+                         FASTER_RCNN_PATH,
+                         'rgb-ssd300_ucf24_120000.pth'),
     DATASET_PATH=os.path.join(os.path.dirname(__file__),
                               FASTER_RCNN_PATH,
                               'ucf24/'))
@@ -72,9 +72,9 @@ lin_prog = pnet.LinearProgress(split=split_type)
 
 # Setting up the dataloader for making inferences on tubes
 data_loader = data.DataLoader(dataset,
-                                  shuffle=False,
-                                  collate_fn=detection_collate,
-                                  pin_memory=True)
+                              shuffle=False,
+                              collate_fn=detection_collate,
+                              pin_memory=True)
 
 
 
@@ -125,7 +125,7 @@ for i in range(NUM_EPOCHS):
         # iterate over all classes for this sample
         detections_dict = {} # Creating a dictionary to store the detected classes (highest confidence one per class if they are above threshold confidence)
         for cl_ind in range(1, NUM_CLASSES):
-            # class_detections is an array with 5 element arrays for each detection. The elements are x1 y1 x2 y2 confidence
+            # class_detections is an array with 5 element arrays for each detection: [x1 y1 x2 y2 confidence]
             class_detections = frcnn.get_class_detections(
                 cl_ind,
                 conf_scores,
@@ -135,7 +135,7 @@ for i in range(NUM_EPOCHS):
             # Keeping only those detections that have a confidence > 50%
             # Further, keeping only one detection per image
             class_detections = np.array(class_detections)
-            
+
             if class_detections.shape[0] == 0:
                 class_detections = np.array([])
             elif class_detections.shape[0] == 1:
@@ -153,9 +153,12 @@ for i in range(NUM_EPOCHS):
 
 
         # print(detections_dict)
-        # For now, ProgressNet only returns one action progress value per tube. Hence, detections dict is reduced to get the highest confidence bounding 
-        # box and the corresponding action class. However, future improvements can be made to return multiple action progresses per tube.
-        # We chose to keep detections_dict as it offers an opportunity for future improvements even though it is a bit redundant at present
+        # For now, ProgressNet only returns one action progress value per tube.
+        # Hence, detections dict is reduced to get the highest confidence bounding 
+        # box and the corresponding action class.
+        # However, future improvements can be made to return multiple action progresses per tube.
+        # We chose to keep detections_dict as it offers an opportunity for future improvements
+        # even though it is a bit redundant at present
         detected_class = None
         highest_conf_bbox = None
         if not len(detections_dict) == 0:
