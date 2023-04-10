@@ -1,13 +1,14 @@
 import numpy as np
 import torch
-import torch.backends.cudnn as cudnn
 import torch.utils.data as data
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
- 
+
 import sys
-sys.path.append('../realtime_action_detection')
+
+FASTER_RCNN_PATH = '../realtime-action-detection'
+sys.path.append(FASTER_RCNN_PATH)
 
 from data import (CLASSES, detection_collate)
 import load_faster_r_cnn as frcnn
@@ -28,7 +29,7 @@ RUN_NAME = 'test1'
 split_type = 'test' # OR 'train'
 
 # Setting up GPU availability
-CUDA = True
+CUDA = False
 if CUDA and torch.cuda.is_available():
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
 else:
@@ -37,7 +38,14 @@ else:
 
 # './rgb-ssd300_ucf24_120000.pth'
 
-backbone_net, dataset = frcnn.setup_backbone(split = split_type, BASENET = os.path.join(os.path.dirname(__file__), '..', 'realtime_action_detection', 'rgb-ssd300_ucf24_120000.pth'), DATASET_PATH=os.path.join(os.path.dirname(__file__), '..', 'realtime_action_detection', 'ucf24/'))
+backbone_net, dataset = frcnn.setup_backbone(
+    split = split_type,
+    BASENET = os.path.join(os.path.dirname(__file__),
+                           FASTER_RCNN_PATH,
+                           'rgb-ssd300_ucf24_120000.pth'),
+    DATASET_PATH=os.path.join(os.path.dirname(__file__),
+                              FASTER_RCNN_PATH,
+                              'ucf24/'))
 
 if loss_type == 'BO':
     bo_loss = pnet.BOLoss()
@@ -164,7 +172,10 @@ for i in range(NUM_EPOCHS):
         bbox = np.zeros((1,5))
         bbox[0,0] = 0
         bbox[0,1:5] = highest_conf_bbox[:-1]
-        bbox = torch.tensor(bbox).float().cuda()
+        if CUDA:
+            bbox = torch.tensor(bbox).float().cuda()
+        else:
+            bbox = torch.tensor(bbox).float()
         image = images[0]
 
         ######################################

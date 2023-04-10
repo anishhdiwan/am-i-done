@@ -1,13 +1,15 @@
 # Setup
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torchvision.ops import roi_pool
-from torchsummary import summary
-import numpy as np
 import pickle
 import os
 
+
+SPLITFILES_PATH = os.path.join(os.path.dirname(__file__),
+                               '../realtime-action-detection',
+                               'ucf24',
+                               'splitfiles')
 
 class BOLoss(nn.Module):
     def __init__(self):
@@ -88,9 +90,9 @@ class LinearProgress():
 
     def __init__(self, split='train'):
         if split=='train':
-            data_path = os.path.join(os.path.dirname(__file__), '..', 'realtime_action_detection', 'ucf24', 'splitfiles', 'trainlist01.txt')
+            data_path = os.path.join(SPLITFILES_PATH, 'trainlist01.txt')
         elif split == 'test':
-            data_path = os.path.join(os.path.dirname(__file__), '..', 'realtime_action_detection', 'ucf24', 'splitfiles', 'testlist01.txt')
+            data_path = os.path.join(SPLITFILES_PATH, 'testlist01.txt')
 
         data_file = open(data_path, 'r')
         data_list = data_file.read()
@@ -98,7 +100,7 @@ class LinearProgress():
         data_file.close()
         # print(data_list)
 
-        annot_path = os.path.join(os.path.dirname(__file__), '..', 'realtime_action_detection', 'ucf24', 'splitfiles', 'pyannot.pkl')
+        annot_path = os.path.join(SPLITFILES_PATH, 'pyannot.pkl')
         with open(annot_path, 'rb') as handle:
             annotations = pickle.load(handle)
 
