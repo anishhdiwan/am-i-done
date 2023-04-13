@@ -24,12 +24,13 @@ NUM_CLASSES = len(CLASSES) + 1  # +1 'background' class
 loss_type = 'BO' # 'MSE'
 RUN_NAME = 'test1'
 
-# Split type is the variable used to choose between running through the train or test list of ucf24. These lists indicate which dataset
-# entries are passed through the network and can be found in the splitfiles directory in /ucf24
+# Split type is the variable used to choose between running through the train or test list of ucf24.
+# These lists indicate which dataset entries are passed through the network and can be found in the
+# splitfiles directory ucf24/splitfiles.
 split_type = 'test' # OR 'train'
 
 # Setting up GPU availability
-CUDA = True
+CUDA = False
 if CUDA and torch.cuda.is_available():
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
 else:
@@ -154,9 +155,9 @@ for i in range(NUM_EPOCHS):
 
         # print(detections_dict)
         # For now, ProgressNet only returns one action progress value per tube.
-        # Hence, detections dict is reduced to get the highest confidence bounding 
-        # box and the corresponding action class.
-        # However, future improvements can be made to return multiple action progresses per tube.
+        # Hence, detections dict is reduced to get the highest confidence bounding box
+        # and the corresponding action class.
+        # However, future improvements can be made to return multiple action progresses per tube.  TODO
         # We chose to keep detections_dict as it offers an opportunity for future improvements
         # even though it is a bit redundant at present
         detected_class = None
