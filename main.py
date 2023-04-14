@@ -6,9 +6,14 @@ import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 
 import sys
+import os
 
-FASTER_RCNN_PATH = '../realtime-action-detection'
+# FASTER_RCNN_PATH = '../realtime-action-detection'
+
+FASTER_RCNN_PATH = os.path.join(os.path.dirname(__file__),
+                               '../realtime-action-detection')
 sys.path.append(FASTER_RCNN_PATH)
+
 
 from data import (CLASSES, detection_collate)
 import load_faster_r_cnn as frcnn
@@ -23,14 +28,17 @@ CUTOFF = 100
 NUM_CLASSES = len(CLASSES) + 1  # +1 'background' class
 loss_type = 'BO' # 'MSE'
 RUN_NAME = 'test1'
+# Setting up a run type to indicate whether the model is being trained or just tested (inference)
+run_type = 'train' # or 'test'
 
 # Split type is the variable used to choose between running through the train or test list of ucf24.
 # These lists indicate which dataset entries are passed through the network and can be found in the
 # splitfiles directory ucf24/splitfiles.
 split_type = 'test' # OR 'train'
 
+
 # Setting up GPU availability
-CUDA = False
+CUDA = True
 if CUDA and torch.cuda.is_available():
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
 else:
@@ -54,8 +62,6 @@ elif loss_type == 'MSE':
     mse_loss = nn.MSELoss()
 
 
-# Setting up a run type to indicate whether the model is being trained or just tested (inference)
-run_type = 'train' # or 'test'
 
 # Setting up a MSE object to compute average progress prediction MSE across all runs
 if run_type == 'test':
