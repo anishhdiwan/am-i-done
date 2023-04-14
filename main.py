@@ -29,7 +29,7 @@ NUM_CLASSES = len(CLASSES) + 1  # +1 'background' class
 loss_type = 'BO' # 'MSE'
 RUN_NAME = 'test1'
 # Setting up a run type to indicate whether the model is being trained or just tested (inference)
-run_type = 'test' # or 'train'
+run_type = 'train' # or 'test'
 
 # Split type is the variable used to choose between running through the train or test list of ucf24.
 # These lists indicate which dataset entries are passed through the network and can be found in the
@@ -62,7 +62,7 @@ elif loss_type == 'MSE':
 
 
 # Setting up a MSE object to compute average progress prediction MSE across all runs
-if run_type == 'train':
+if run_type == 'test':
     mse = nn.MSELoss()
 
 if CUDA:
