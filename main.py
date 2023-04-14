@@ -29,7 +29,7 @@ NUM_CLASSES = len(CLASSES) + 1  # +1 'background' class
 loss_type = 'BO' # 'MSE'
 RUN_NAME = 'test1'
 # Setting up a run type to indicate whether the model is being trained or just tested (inference)
-run_type = 'train' # or 'test'
+run_type = 'test' # or 'train'
 
 # Split type is the variable used to choose between running through the train or test list of ucf24.
 # These lists indicate which dataset entries are passed through the network and can be found in the
@@ -64,7 +64,7 @@ elif loss_type == 'MSE':
 
 
 # Setting up a MSE object to compute average progress prediction MSE across all runs
-if run_type == 'test':
+if run_type == 'train':
     mse = nn.MSELoss()
 
 if CUDA:
@@ -102,7 +102,8 @@ sample_itr = iter(data_loader) # Iterator to iterate through the data_loader
 
 # Counting the number of total learning steps
 total_steps = 0
-progress_MSE = 0
+EWMA_progress_MSE = 0
+average_progress_MSE = 0
 
 for i in range(NUM_EPOCHS):
     # iterate over samples
@@ -110,8 +111,8 @@ for i in range(NUM_EPOCHS):
     for sample_ind in loop:
         loop.set_description(f"Epoch {i} Samples")
         
-        if CUDA:
-            torch.cuda.synchronize()
+        # if CUDA:
+        #     torch.cuda.synchronize()
 
         ######################################
         # Faster R-CNN
@@ -199,6 +200,7 @@ for i in range(NUM_EPOCHS):
                 predicted_progress = progress_net(image, bbox)
 
         # Loss
+        predicted_progress = predicted_progress[0,0,0]
         if loss_type == 'MSE':
             loss = mse_loss(torch.tensor(progress), predicted_progress)
         elif loss_type == 'BO':
@@ -216,8 +218,16 @@ for i in range(NUM_EPOCHS):
             writer.add_scalar("Loss vs Total Steps (across all episodes)", loss, total_steps)
             total_steps += 1
         elif run_type == 'test':
-            progress_MSE = 0.5*progress_MSE + 0.5*mse(torch.tensor(progress), predicted_progress)
+            EWMA_progress_MSE = 0.5*EWMA_progress_MSE + 0.5*mse(torch.tensor(progress), predicted_progress)
+            average_progress_MSE += mse(torch.tensor(progress), predicted_progress)
 
 
         # print(f'Sample idx: {sample_ind} | predicted_progress {predicted_progress} | progress {progress}')
 
+
+print("Training Completed")
+
+if run_type == 'test':
+    average_progress_MSE = round(average_progress_MSE/(NUM_EPOCHS*CUTOFF),4)
+    print(f"Exponentially Weighted Moving Average of Progreess MSE: {round(EWMA_progress_MSE,4)}")
+    print(f"Average MSE of progress: {average_progress_MSE}")

@@ -56,9 +56,9 @@ class ProgressNet(nn.Module):
     bbox = list with x1, y1, x2, y2 as bbox coordinates
     '''
 
-    x = self.spp(x.view(1,3,300,300))
-    y = roi_pool(x, bbox, (16,12))
-    x = torch.cat((x.flatten(), y.flatten())).view(1,-1)
+    z = self.spp(x.view(1,3,300,300))
+    y = roi_pool(x.view(1,3,300,300), bbox, (16,12))
+    x = torch.cat((z.flatten(), y.flatten())).view(1,-1)
     x = self.fc7(x)
     x = self.relu(x)
     x = self.dropout(x)
