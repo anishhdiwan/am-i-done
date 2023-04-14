@@ -8,8 +8,8 @@ from torch.utils.tensorboard import SummaryWriter
 import sys
 import os
 
-# FASTER_RCNN_PATH = '../realtime-action-detection'
 
+# Adding the realtime action detection directory to the path to access some of its functionality
 FASTER_RCNN_PATH = os.path.join(os.path.dirname(__file__),
                                '../realtime-action-detection')
 sys.path.append(FASTER_RCNN_PATH)
@@ -24,7 +24,7 @@ from tqdm import tqdm
 
 NUM_EPOCHS = 1
 LR = 1e-4
-CUTOFF = 100
+CUTOFF = 100 # Cutoff is the number of samples that are passed into the model per epoch. This enables testing on a smaller dataset
 NUM_CLASSES = len(CLASSES) + 1  # +1 'background' class
 loss_type = 'BO' # 'MSE'
 RUN_NAME = 'test1'
@@ -44,8 +44,6 @@ if CUDA and torch.cuda.is_available():
 else:
     torch.set_default_tensor_type('torch.FloatTensor')
 
-
-# './rgb-ssd300_ucf24_120000.pth'
 
 backbone_net, dataset = frcnn.setup_backbone(
     split=split_type,
@@ -86,7 +84,7 @@ data_loader = data.DataLoader(dataset,
 
 
 
-num_samples = len(data_loader) # Number of samples i the dataset. A sample is either an image or a batch of images.
+num_samples = len(data_loader) # Number of samples i the dataset. A sample is an image (or a batch with size 1)
 print('Number of images: ', len(dataset),
       '\nNumber of batches: ', num_samples)
 
@@ -100,7 +98,7 @@ writer = SummaryWriter(log_dir=os.path.join(os.path.dirname(__file__), logdir))
 
 sample_itr = iter(data_loader) # Iterator to iterate through the data_loader
 
-# Counting the number of total learning steps
+# Counting the number of total learning steps and some test metrics
 total_steps = 0
 EWMA_progress_MSE = 0
 average_progress_MSE = 0

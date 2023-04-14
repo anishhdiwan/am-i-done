@@ -14,10 +14,8 @@ SPLITFILES_PATH = os.path.join(os.path.dirname(__file__),
 class BOLoss(nn.Module):
     def __init__(self):
         super().__init__()
-        # self.phase_intervals = phase_intervals
 
     def forward(self, predictions, targets, phase_intervals):
-        # N = predictions.shape[0]
         errors = torch.abs(predictions - targets)
         potentials = []
 
@@ -41,12 +39,10 @@ class ProgressNet(nn.Module):
   def __init__(self):
     super().__init__()
     self.spp = nn.MaxPool2d((30, 30), stride=10) # For a 300 x 300 image the output shape is 3, 28, 28
-    # self. roi = nn.ROIPool((width, height), spatial_scale)
     self.fc7 = nn.Linear(2928, 128) # in_dim = 2928 as the spp output is 3x28x28 and the roi output is 3x16x12. Both are flattened and passed to fc7 
     self.lstm1 = nn.LSTM(128, 64, num_layers=1)
     self.lstm2 = nn.LSTM(64, 32, num_layers=1)
     self.fc8 = nn.Linear(32, 1)
-    # self.softmax = nn.Softmax()
     self.relu = nn.ReLU()
     self.dropout = nn.Dropout(0.5)
   
@@ -55,22 +51,16 @@ class ProgressNet(nn.Module):
     x = image
     bbox = list with x1, y1, x2, y2 as bbox coordinates
     '''
-
     z = self.spp(x.view(1,3,300,300))
     y = roi_pool(x.view(1,3,300,300), bbox, (16,12))
     x = torch.cat((z.flatten(), y.flatten())).view(1,-1)
     x = self.fc7(x)
     x = self.relu(x)
     x = self.dropout(x)
-    # print(x.shape)
     x, (h_n, c_n) = self.lstm1(x.view(1,1,128))
-    # print(x.shape)
     x, (h_n, c_n) = self.lstm2(x)
     x = self.fc8(x)
-    # x = self.dropout(x)
-    # x = self.softmax(x)
     return torch.special.expit(x)
-    # return x
 
 
 
