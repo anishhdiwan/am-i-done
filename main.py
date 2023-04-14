@@ -22,12 +22,12 @@ import os
 from tqdm import tqdm
 
 
-NUM_EPOCHS = 1
+NUM_EPOCHS = 5
 LR = 1e-4
-CUTOFF = 100 # Cutoff is the number of samples that are passed into the model per epoch. This enables testing on a smaller dataset
+CUTOFF = int(0.2*159289) # Cutoff is the number of samples that are passed into the model per epoch. This enables testing on a smaller dataset
 NUM_CLASSES = len(CLASSES) + 1  # +1 'background' class
 loss_type = 'BO' # 'MSE'
-RUN_NAME = 'test1'
+RUN_NAME = 'Default_params_v1'
 # Setting up a run type to indicate whether the model is being trained or just tested (inference)
 run_type = 'train' # or 'test'
 
@@ -73,6 +73,21 @@ else:
 optimizer = optim.Adam(progress_net.parameters(), lr=LR)
 lin_prog = pnet.LinearProgress(split=split_type)
 
+
+'''
+print("Testing linear progress method")
+print(f"cutoff: {CUTOFF}")
+for sample_ind in range(CUTOFF):
+    try:
+        progress = round(lin_prog.get_progress_value(sample_ind),4)
+        if progress == None:
+            print("Gotcha!")
+            print(i)
+            print(lin_prog.last_match)
+    except Exception as e:
+        print(sample_ind)
+        print(lin_prog.last_match)
+'''
 
 
 # Setting up the dataloader for making inferences on tubes
