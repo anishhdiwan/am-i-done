@@ -7,6 +7,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 import sys
 import os
+import pickle
 
 
 # Adding the realtime action detection directory to the path to access some of its functionality
@@ -24,18 +25,23 @@ from tqdm import tqdm
 
 NUM_EPOCHS = 5
 LR = 1e-4
-CUTOFF = int(0.2*159289) # Cutoff is the number of samples that are passed into the model per epoch. This enables testing on a smaller dataset
+CUTOFF = 300
+# CUTOFF = int(0.2*159289) # Cutoff is the number of samples that are passed into the model per epoch. This enables testing on a smaller dataset
 NUM_CLASSES = len(CLASSES) + 1  # +1 'background' class
 loss_type = 'BO' # 'MSE'
 RUN_NAME = 'Default_params_v1'
 # Setting up a run type to indicate whether the model is being trained or just tested (inference)
-run_type = 'train' # or 'test'
+run_type = 'test' # or 'train'
+if run_type == 'test':
+    NUM_EPOCHS = 1 # Testing only with one pass of the test dataset
 
 # Split type is the variable used to choose between running through the train or test list of ucf24.
 # These lists indicate which dataset entries are passed through the network and can be found in the
 # splitfiles directory ucf24/splitfiles.
 split_type = 'test' # OR 'train'
 
+# Visualize runs inference on the test dataset for a the first few actions. It saves predicted action progress values to later plot them
+visualise = True 
 
 # Setting up GPU availability
 CUDA = True
@@ -115,6 +121,8 @@ sample_itr = iter(data_loader) # Iterator to iterate through the data_loader
 
 # Counting the number of total learning steps and some test metrics
 total_steps = 0
+visualise_progress = [] # List to store the predicted progess values for visualisation
+print(f"First few tube durations: {lin_prog.tube_durations[:3]}")
 EWMA_progress_MSE = 0
 average_progress_MSE = 0
 
@@ -204,13 +212,22 @@ for i in range(NUM_EPOCHS):
 
         ######################################
         # ProgressNet 
-        progress = round(lin_prog.get_progress_value(sample_ind),4)
+        progress = lin_prog.get_progress_value(sample_ind)
+        if progress == None:
+            continue
+        progress = round(progress,4)
+
+
 
         if run_type == 'train':
             predicted_progress = progress_net(image, bbox)
         elif run_type == 'test':
             with torch.no_grad():
                 predicted_progress = progress_net(image, bbox)
+
+        if visualise == True:
+            if sample_ind < lin_prog.tube_durations[2][1]:
+                visualise_progress.append((predicted_progress, progress))
 
         # Loss
         predicted_progress = predicted_progress[0,0,0]
@@ -241,6 +258,13 @@ for i in range(NUM_EPOCHS):
 print("Training Completed")
 
 if run_type == 'test':
-    average_progress_MSE = round(average_progress_MSE/(NUM_EPOCHS*CUTOFF),4)
-    print(f"Exponentially Weighted Moving Average of Progreess MSE: {round(EWMA_progress_MSE,4)}")
+    average_progress_MSE = average_progress_MSE/(NUM_EPOCHS*CUTOFF)
+    print(f"Exponentially Weighted Moving Average of Progreess MSE: {EWMA_progress_MSE}")
     print(f"Average MSE of progress: {average_progress_MSE}")
+
+# SAVE_PATH = logdir + ".pt"
+# torch.save(progress_net.state_dict(), SAVE_PATH)
+
+# if visualise == True:
+#     with open('visualise_progress.pickle', 'wb') as handle:
+#         pickle.dump(visualise_progress, handle, protocol=pickle.HIGHEST_PROTOCOL)
