@@ -11,6 +11,7 @@ SPLITFILES_PATH = os.path.join(os.path.dirname(__file__),
                                'ucf24',
                                'splitfiles')
 
+
 class BOLoss(nn.Module):
     def __init__(self):
         super().__init__()
@@ -36,32 +37,31 @@ class BOLoss(nn.Module):
 
 
 class ProgressNet(nn.Module):
-  def __init__(self):
-    super().__init__()
-    self.spp = nn.MaxPool2d((30, 30), stride=10) # For a 300 x 300 image the output shape is 3, 28, 28
-    self.fc7 = nn.Linear(2928, 128) # in_dim = 2928 as the spp output is 3x28x28 and the roi output is 3x16x12. Both are flattened and passed to fc7 
-    self.lstm1 = nn.LSTM(128, 64, num_layers=1)
-    self.lstm2 = nn.LSTM(64, 32, num_layers=1)
-    self.fc8 = nn.Linear(32, 1)
-    self.relu = nn.ReLU()
-    self.dropout = nn.Dropout(0.5)
-  
-  def forward(self, x, bbox):
-    '''
-    x = image
-    bbox = list with x1, y1, x2, y2 as bbox coordinates
-    '''
-    z = self.spp(x.view(1,3,300,300))
-    y = roi_pool(x.view(1,3,300,300), bbox, (16,12))
-    x = torch.cat((z.flatten(), y.flatten())).view(1,-1)
-    x = self.fc7(x)
-    x = self.relu(x)
-    x = self.dropout(x)
-    x, (h_n, c_n) = self.lstm1(x.view(1,1,128))
-    x, (h_n, c_n) = self.lstm2(x)
-    x = self.fc8(x)
-    return torch.special.expit(x)
+    def __init__(self):
+        super().__init__()
+        self.spp = nn.MaxPool2d((30, 30), stride=10)  # For a 300 x 300 image the output shape is 3, 28, 28
+        self.fc7 = nn.Linear(2928, 128)  # in_dim = 2928 as the spp output is 3x28x28 and the roi output is 3x16x12. Both are flattened and passed to fc7 
+        self.lstm1 = nn.LSTM(128, 64, num_layers=1)
+        self.lstm2 = nn.LSTM(64, 32, num_layers=1)
+        self.fc8 = nn.Linear(32, 1)
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(0.5)
 
+    def forward(self, x, bbox):
+        '''
+        x = image
+        bbox = list with x1, y1, x2, y2 as bbox coordinates
+        '''
+        z = self.spp(x.view(1, 3, 300, 300))
+        y = roi_pool(x.view(1, 3, 300, 300), bbox, (16, 12))
+        x = torch.cat((z.flatten(), y.flatten())).view(1, -1)
+        x = self.fc7(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+        x, (h_n, c_n) = self.lstm1(x.view(1, 1, 128))
+        x, (h_n, c_n) = self.lstm2(x)
+        x = self.fc8(x)
+        return torch.special.expit(x)
 
 
 class LinearProgress():
@@ -83,7 +83,7 @@ class LinearProgress():
     '''
 
     def __init__(self, split='train'):
-        if split=='train':
+        if split == 'train':
             data_path = os.path.join(SPLITFILES_PATH, 'trainlist01.txt')
         elif split == 'test':
             data_path = os.path.join(SPLITFILES_PATH, 'testlist01.txt')
@@ -97,7 +97,6 @@ class LinearProgress():
         annot_path = os.path.join(SPLITFILES_PATH, 'pyannot.pkl')
         with open(annot_path, 'rb') as handle:
             annotations = pickle.load(handle)
-
 
         # Tube durations is a list containing 3 element tuples indicating the (tube start, tube end, action class)
         # for each tube that the dataloader loads
@@ -124,7 +123,6 @@ class LinearProgress():
         # This helps quickly search through tube durations to get progress values
         self.last_match = 0
 
-
     def get_progress_value(self, sample_ind):
         if self.tube_durations[self.last_match][0] <= sample_ind <= self.tube_durations[self.last_match][1]:
             # same last_match still applies
@@ -134,7 +132,4 @@ class LinearProgress():
             # last_match needs to be updated
             self.last_match += 1
             progress = (sample_ind - self.tube_durations[self.last_match][0])/(self.tube_durations[self.last_match][1] - self.tube_durations[self.last_match][0])
-            return progress	
-
-
-
+            return progress

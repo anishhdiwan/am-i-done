@@ -28,25 +28,26 @@ LR = 1e-4
 CUTOFF = 300
 # CUTOFF = int(0.2*159289) # Cutoff is the number of samples that are passed into the model per epoch. This enables testing on a smaller dataset
 NUM_CLASSES = len(CLASSES) + 1  # +1 'background' class
-loss_type = 'BO' # 'MSE'
+loss_type = 'BO'  # 'MSE'
 RUN_NAME = 'Default_params_v1'
 # Setting up a run type to indicate whether the model is being trained or just tested (inference)
-run_type = 'test' # or 'train'
+run_type = 'test'  # or 'train'
 if run_type == 'test':
-    NUM_EPOCHS = 1 # Testing only with one pass of the test dataset
+    NUM_EPOCHS = 1  # Testing only with one pass of the test dataset
 
 # Split type is the variable used to choose between running through the train or test list of ucf24.
 # These lists indicate which dataset entries are passed through the network and can be found in the
 # splitfiles directory ucf24/splitfiles.
-split_type = 'test' # OR 'train'
+split_type = 'test'  # OR 'train'
 
 # Visualize runs inference on the test dataset for a the first few actions. It saves predicted action progress values to later plot them
-visualise = True 
+visualise = True
 
-# Setting up GPU availability
-CUDA = True
-if CUDA and torch.cuda.is_available():
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
+# Setting up USE_GPU availability
+USE_GPU = True
+if USE_GPU:
+    if torch.cuda.is_available():
+        torch.set_default_tensor_type('torch.cuda.FloatTensor')
 else:
     torch.set_default_tensor_type('torch.FloatTensor')
 
@@ -66,12 +67,11 @@ elif loss_type == 'MSE':
     mse_loss = nn.MSELoss()
 
 
-
 # Setting up a MSE object to compute average progress prediction MSE across all runs
 if run_type == 'test':
     mse = nn.MSELoss()
 
-if CUDA:
+if USE_GPU:
     progress_net = pnet.ProgressNet().cuda()
 else:
     progress_net = pnet.ProgressNet()
@@ -80,20 +80,18 @@ optimizer = optim.Adam(progress_net.parameters(), lr=LR)
 lin_prog = pnet.LinearProgress(split=split_type)
 
 
-'''
-print("Testing linear progress method")
-print(f"cutoff: {CUTOFF}")
-for sample_ind in range(CUTOFF):
-    try:
-        progress = round(lin_prog.get_progress_value(sample_ind),4)
-        if progress == None:
-            print("Gotcha!")
-            print(i)
-            print(lin_prog.last_match)
-    except Exception as e:
-        print(sample_ind)
-        print(lin_prog.last_match)
-'''
+# print("Testing linear progress method")
+# print(f"cutoff: {CUTOFF}")
+# for sample_ind in range(CUTOFF):
+#     try:
+#         progress = round(lin_prog.get_progress_value(sample_ind),4)
+#         if progress == None:
+#             print("Gotcha!")
+#             print(i)
+#             print(lin_prog.last_match)
+#     except Exception as e:
+#         print(sample_ind)
+#         print(lin_prog.last_match)
 
 
 # Setting up the dataloader for making inferences on tubes
@@ -103,13 +101,9 @@ data_loader = data.DataLoader(dataset,
                               pin_memory=True)
 
 
-
-
-num_samples = len(data_loader) # Number of samples i the dataset. A sample is an image (or a batch with size 1)
+num_samples = len(data_loader)  # Number of samples i the dataset. A sample is an image (or a batch with size 1)
 print('Number of images: ', len(dataset),
       '\nNumber of batches: ', num_samples)
-
-
 
 logdir = f"runs/lr_{LR}_loss_type_{loss_type}_epochs_{NUM_EPOCHS}_data_used_{split_type}_run_{RUN_NAME}"
 
@@ -117,11 +111,11 @@ logdir = f"runs/lr_{LR}_loss_type_{loss_type}_epochs_{NUM_EPOCHS}_data_used_{spl
 writer = SummaryWriter(log_dir=os.path.join(os.path.dirname(__file__), logdir))
 
 
-sample_itr = iter(data_loader) # Iterator to iterate through the data_loader
+sample_itr = iter(data_loader)  # Iterator to iterate through the data_loader
 
 # Counting the number of total learning steps and some test metrics
 total_steps = 0
-visualise_progress = [] # List to store the predicted progess values for visualisation
+visualise_progress = []  # List to store the predicted progess values for visualisation
 print(f"First few tube durations: {lin_prog.tube_durations[:3]}")
 EWMA_progress_MSE = 0
 average_progress_MSE = 0
@@ -131,9 +125,9 @@ for i in range(NUM_EPOCHS):
     loop = tqdm(range(CUTOFF))
     for sample_ind in loop:
         loop.set_description(f"Epoch {i} Samples")
-        
-        # if CUDA:
-        #     torch.cuda.synchronize()
+
+        if USE_GPU:
+            torch.cuda.synchronize()
 
         ######################################
         # Faster R-CNN
@@ -142,7 +136,7 @@ for i in range(NUM_EPOCHS):
         images, targets, img_indexs = next(sample_itr)
         height, width = images.size(2), images.size(3)
 
-        if CUDA:
+        if USE_GPU:
             images = images.cuda()
 
         with torch.no_grad():
@@ -152,7 +146,7 @@ for i in range(NUM_EPOCHS):
         conf_scores, decoded_boxes = frcnn.get_scores_and_boxes(output, backbone_net)
 
         # iterate over all classes for this sample
-        detections_dict = {} # Creating a dictionary to store the detected classes (highest confidence one per class if they are above threshold confidence)
+        detections_dict = {}  # Creating a dictionary to store the detected classes (highest confidence one per class if they are above threshold confidence)
         for cl_ind in range(1, NUM_CLASSES):
             # class_detections is an array with 5 element arrays for each detection: [x1 y1 x2 y2 confidence]
             class_detections = frcnn.get_class_detections(
@@ -180,7 +174,6 @@ for i in range(NUM_EPOCHS):
                 else:
                     detections_dict[cl_ind] = class_detections
 
-
         # print(detections_dict)
         # For now, ProgressNet only returns one action progress value per tube.
         # Hence, detections dict is reduced to get the highest confidence bounding box
@@ -201,23 +194,21 @@ for i in range(NUM_EPOCHS):
         # print(f"class : {detected_class}")
         # print(f"bbox : {highest_conf_bbox}")
 
-        bbox = np.zeros((1,5))
-        bbox[0,0] = 0
-        bbox[0,1:5] = highest_conf_bbox[:-1]
-        if CUDA:
+        bbox = np.zeros((1, 5))
+        bbox[0, 0] = 0
+        bbox[0, 1:5] = highest_conf_bbox[:-1]
+        if USE_GPU:
             bbox = torch.tensor(bbox).float().cuda()
         else:
             bbox = torch.tensor(bbox).float()
         image = images[0]
 
         ######################################
-        # ProgressNet 
+        # ProgressNet
         progress = lin_prog.get_progress_value(sample_ind)
-        if progress == None:
+        if progress is None:
             continue
-        progress = round(progress,4)
-
-
+        progress = round(progress, 4)
 
         if run_type == 'train':
             predicted_progress = progress_net(image, bbox)
@@ -225,23 +216,22 @@ for i in range(NUM_EPOCHS):
             with torch.no_grad():
                 predicted_progress = progress_net(image, bbox)
 
-        if visualise == True:
+        if visualise is True:
             if sample_ind < lin_prog.tube_durations[2][1]:
                 visualise_progress.append((predicted_progress, progress))
 
         # Loss
-        predicted_progress = predicted_progress[0,0,0]
+        predicted_progress = predicted_progress[0, 0, 0]
         if loss_type == 'MSE':
             loss = mse_loss(torch.tensor(progress), predicted_progress)
         elif loss_type == 'BO':
             action_tube = lin_prog.tube_durations[lin_prog.last_match]
             loss = bo_loss(torch.tensor(progress), predicted_progress, [(action_tube[0], action_tube[1])]) 
 
-
         if run_type == 'train':
             # If training, then optimize the model and write training metrics
             # Optimize the model
-            optimizer.zero_grad() # Not calling zero_grad as we are working with RNNs
+            optimizer.zero_grad()  # Not calling zero_grad as we are working with RNNs
             loss.backward()
             optimizer.step()
 
@@ -250,7 +240,6 @@ for i in range(NUM_EPOCHS):
         elif run_type == 'test':
             EWMA_progress_MSE = 0.5*EWMA_progress_MSE + 0.5*mse(torch.tensor(progress), predicted_progress)
             average_progress_MSE += mse(torch.tensor(progress), predicted_progress)
-
 
         # print(f'Sample idx: {sample_ind} | predicted_progress {predicted_progress} | progress {progress}')
 
